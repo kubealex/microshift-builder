@@ -166,11 +166,13 @@
         path: "{{ playbook_dir }}/rhel4edge"
         state: directory
         mode: "0755"
-      delegate_to: 127.0.0.1
+      delegate_to: localhost
+      become: false
 
     - name: Microshift builder | Fetch built image
       ansible.posix.synchronize:
         src: "{{ microshift_build_path }}/{{ installer_image_uuid }}-installer.iso"
         dest: "{{ playbook_dir }}/rhel4edge/r4e-microshift-installer.x86_64.iso"
         mode: pull
-      delegate_to: 127.0.0.1
+      delegate_to: localhost
+      become: false
