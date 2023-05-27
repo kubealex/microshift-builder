@@ -22,7 +22,7 @@
         state: directory
         recurse: true
 
-    - name: Ensure RHEL8.6 repos are in place
+    - name: Ensure needed RHEL repos are in place
       ansible.builtin.copy:
         src: "repositories/{{ item }}"
         dest: /etc/osbuild-composer/repositories/
