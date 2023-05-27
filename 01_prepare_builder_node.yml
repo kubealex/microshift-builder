@@ -20,13 +20,6 @@
         username: "{{ rhsm_user }}"
         password: "{{ rhsm_password }}"
 
-    - name: Enable required RHSM repositories
-      community.general.rhsm_repository:
-        name:
-          - rhocp-4.13-for-rhel-9-x86_64-rpms
-          - fast-datapath-for-rhel-9-x86_64-rpms
-        state: enabled
-
     - name: Install required packages
       ansible.builtin.yum:
         name:
@@ -39,7 +32,16 @@
           - syslinux
           - lorax
           - firewalld
+          - runc
+          - containernetworking-cni
         state: present
+
+    - name: Enable required RHSM repositories
+      community.general.rhsm_repository:
+        name:
+          - rhocp-4.13-for-rhel-9-x86_64-rpms
+          - fast-datapath-for-rhel-9-x86_64-rpms
+        state: enabled
 
     - name: Ensure required services are enabled
       ansible.builtin.service:

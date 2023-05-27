@@ -24,8 +24,9 @@
 
     - name: Ensure RHEL8.6 repos are in place
       ansible.builtin.copy:
-        src: "{{ item }}"
+        src: "repositories/{{ item }}"
         dest: /etc/osbuild-composer/repositories/
+        mode: "0755"
       loop:
         - rhel-9.json
         - rhel-92.json
@@ -45,7 +46,7 @@
 
     - name: Copy files on builder
       ansible.builtin.copy:
-        src: "{{ item }}"
+        src: "blueprints/{{ item }}"
         dest: "{{ microshift_build_path }}/"
         mode: "0755"
       loop:
@@ -86,7 +87,6 @@
     - name: Cleanup previous containers
       containers.podman.podman_container:
         name: rhel-edge-container
-        force: true
         state: absent
 
     - name: Cleanup previous images
