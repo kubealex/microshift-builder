@@ -16,6 +16,20 @@
         state: directory
         mode: "0755"
 
+    - name: Prepare repositories folder
+      ansible.builtin.file:
+        path: /etc/osbuild-composer/repositories/
+        state: directory
+        recurse: true
+
+    - name: Ensure RHEL8.6 repos are in place
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /etc/osbuild-composer/repositories/
+      loop:
+        - rhel-9.json
+        - rhel-92.json
+
     - name: Cleanup sources before adding
       ansible.builtin.shell: composer-cli compose list | awk 'FNR==2{ print $1 }'
       register: compose_list
@@ -24,10 +38,10 @@
       ansible.builtin.shell: composer-cli compose delete {{ item }}
       loop: "{{ compose_list.stdout_lines }}"
 
-    # - name: Restart osbuilder-composer
-    #   ansible.builtin.service:
-    #     name: osbuild-composer.service
-    #     state: restarted
+    - name: Restart osbuilder-composer
+      ansible.builtin.service:
+        name: osbuild-composer.service
+        state: restarted
 
     - name: Copy files on builder
       ansible.builtin.copy:
@@ -50,7 +64,7 @@
       register: depsolve_output
 
     - name: Start os-tree container image build
-      ansible.builtin.shell: composer-cli compose start-ostree --ref rhel/8/$(uname -i)/edge {{ microshift_blueprint_name }} edge-container
+      ansible.builtin.shell: composer-cli compose start-ostree --ref rhel/9/$(uname -i)/edge {{ microshift_blueprint_name }} edge-container
       register: os_tree_build_output
 
     - name: Set image UUID as fact
