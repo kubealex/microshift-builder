@@ -20,15 +20,10 @@
         username: "{{ rhsm_user }}"
         password: "{{ rhsm_password }}"
 
-    - name: Disable all RHSM repositories
-      community.general.rhsm_repository:
-        name: '*'
-        state: disabled
-
     - name: Enable required RHSM repositories
       community.general.rhsm_repository:
         name:
-          - rhocp-4.13-for-rhel-9-x86_64-rpm
+          - rhocp-4.13-for-rhel-9-x86_64-rpms
           - fast-datapath-for-rhel-9-x86_64-rpms
         state: enabled
 
@@ -43,6 +38,7 @@
           - genisoimage
           - syslinux
           - lorax
+          - firewalld
         state: present
 
     - name: Ensure required services are enabled
@@ -51,6 +47,7 @@
         state: started
         enabled: true
       loop:
+        - firewalld
         - osbuild-composer.socket
         - cockpit.socket
 

@@ -17,17 +17,17 @@
         mode: "0755"
 
     - name: Cleanup sources before adding
-      ansible.builtin.shell: composer-cli compose list | awk '{ print $1 }'
+      ansible.builtin.shell: composer-cli compose list | awk 'FNR==2{ print $1 }'
       register: compose_list
 
     - name: Cleanup
       ansible.builtin.shell: composer-cli compose delete {{ item }}
       loop: "{{ compose_list.stdout_lines }}"
 
-    - name: Restart osbuilder-composer
-      ansible.builtin.service:
-        name: osbuild-composer.service
-        state: restarted
+    # - name: Restart osbuilder-composer
+    #   ansible.builtin.service:
+    #     name: osbuild-composer.service
+    #     state: restarted
 
     - name: Copy files on builder
       ansible.builtin.copy:
@@ -104,11 +104,6 @@
         name: rhel-edge-container
         detach: true
         state: started
-
-    - name: Restart osbuilder-composer
-      ansible.builtin.service:
-        name: osbuild-composer.service
-        state: restarted
 
     - name: Cleanup in composer-cli
       ansible.builtin.shell: composer-cli blueprints delete installer || true

@@ -7,11 +7,7 @@ groups = []
 
 [[packages]]
 name = "microshift"
-version = "4.13.0-1"
-
-[[packages]]
-name = "microshift-greenboot"
-version = "4.13.0-1"
+version = "*"
 
 [customizations.services]
 enabled = ["microshift"]
