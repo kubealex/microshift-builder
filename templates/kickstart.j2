@@ -1,12 +1,10 @@
 zerombr
 clearpart --all --initlabel
-part /boot  --fstype xfs --size=512
-# Create physical volume (minimum 1000MB, maximum 100%)
+part /boot --asprimary --size=512 --fstype xfs --ondisk=vda
+part /boot/efi --asprimary --size 512 --asprimary --fstype=vfat --ondisk=vda
 part pv.01  --fstype=lvmpv --grow --ondisk=vda
-# Create a Volume Group
 volgroup rhel pv.01
-# Create the volumes
-logvol /    --fstype=xfs --size=12360 --name=root --vgname=rhel
+logvol / --fstype=xfs --size=12360 --name=root --vgname=rhel
 network --activate --device=link --onboot=on --hostname={{ microshift_instance_name | default('microshift', true) }}
 ostreesetup --osname=rhel --url=file:///run/install/repo/ostree/repo --ref=rhel/9/x86_64/edge --nogpg
 cmdline
@@ -23,7 +21,6 @@ chmod 600 /etc/crio/openshift-pull-secret
 # Configure the firewall with the mandatory rules for MicroShift
 firewall-offline-cmd --zone=trusted --add-source=10.42.0.0/16
 firewall-offline-cmd --zone=trusted --add-source=169.254.169.1
-firewall-offline-cmd --zone=trusted --add-port=6443/tcp --add-port=443/tcp --add-port=80/tcp --add-port=31883/tcp
 firewall-offline-cmd --zone=public --add-port=6443/tcp --add-port=443/tcp --add-port=80/tcp --add-port=31883/tcp
 
 curl -o /root/oc.tar.gz "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.13/openshift-client-linux.tar.gz"
