@@ -7,7 +7,7 @@
     - name: Microshift builder | Fail fast if pull secret is not defined
       ansible.builtin.fail:
         msg: You need to specify a pull secret in builder-config.yml
-      when: microshift_pull_secret not defined or microshift_pull_secret == ''
+      when: microshift_pull_secret is not defined or microshift_pull_secret == ''
 
     - name: Microshift builder | Ensure lorax is installed
       ansible.builtin.dnf:
