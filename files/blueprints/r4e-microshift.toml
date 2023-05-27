@@ -1,13 +1,22 @@
 name = "r4e-microshift"
-
 description = ""
 version = "0.0.1"
 modules = []
 groups = []
+distro = ""
 
 [[packages]]
 name = "microshift"
-version = "4.13.0"
 
+[customizations]
+hostname = "microshift"
+
+[[customizations.user]]
+name = "admin"
+password = "$6$jBTYy1CgwFQCJkVc$C0iBtRXMprbz7TWIzM9aaXe6b1clOhcV8YHWnNUbKvpP6xtz3.vmP5L6/683ac6hqSaqPPcK7gm9XXeEhp48W."
+groups = ["wheel"]
+[customizations.timezone]
+timezone = "Europe/Rome"
+[customizations.locale]
 [customizations.services]
 enabled = ["microshift"]

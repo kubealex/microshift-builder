@@ -1,43 +1,40 @@
 ---
-- name: Trigger kickstarter 
+- name: Microshift builder | Embed Kickstart in Microshift ISO
   hosts: vm_host
   vars_files:
-    - vars.yml
+    - builder-config.yml
   tasks:
-    - name: Check prerequisites
-      ansible.builtin.import_tasks: 00_check_prerequisites.yml
-        
-    - name: Ensure lorax is installed
+    - name: Microshift builder | Fail fast if pull secret is not defined
+      ansible.builtin.fail:
+        msg: You need to specify a pull secret in builder-config.yml
+      when: microshift_pull_secret not defined or microshift_pull_secret == ''
+
+    - name: Microshift builder | Ensure lorax is installed
       ansible.builtin.dnf:
         name: lorax
         state: present
       become: true
 
-    - name: Create instance dirs
+    - name: Microshift builder | Create instance dir
       ansible.builtin.file:
-        path: "{{ playbook_dir }}/rhel4edge/{{ item.cluster_name }}"
+        path: "{{ playbook_dir }}/rhel4edge/{{ microshift_instance_name | default('microshift', true) }}"
         state: directory
         recurse: true
-      loop: "{{ rhel4edge_instances }}"
 
-    - name: Trigger kickstart template
+    - name: Microshift builder | Trigger kickstart template
       ansible.builtin.template:
         src: kickstart.j2
-        dest: "{{ playbook_dir }}/rhel4edge/{{ item.cluster_name }}/kickstart"
-      loop: "{{ rhel4edge_instances }}"
+        dest: "{{ playbook_dir }}/rhel4edge/{{ microshift_instance_name | default('microshift', true) }}/ks.cfg"
+        mode: "0755"
 
-    - name: Embed kickstart on freshly built image
-      ansible.builtin.shell: mkksiso {{ playbook_dir }}/rhel4edge/{{ item.cluster_name }}/kickstart {{ playbook_dir }}/rhel4edge/r4e-microshift-installer.x86_64.iso /var/lib/libvirt/images/{{ item.cluster_name }}-r4e-microshift-installer.x86_64.iso
+    - name: Microshift builder | Embed kickstart on freshly built image
+      ansible.builtin.shell: mkksiso {{ playbook_dir }}/rhel4edge/{{ microshift_instance_name | default('microshift') }}/ks.cfg {{ playbook_dir }}/rhel4edge/r4e-microshift-installer.x86_64.iso {{ playbook_dir }}/rhel4edge/{{ microshift_instance_name | default('microshift', true) }}/microshift-installer.iso
       args:
-        creates: /var/lib/libvirt/images/{{ item.cluster_name }}-r4e-microshift-installer.x86_64.iso
+        creates: "{{ playbook_dir }}/rhel4edge/{{ microshift_instance_name | default('microshift', true) }}/microshift-installer.iso"
       become: true
-      loop: "{{ rhel4edge_instances }}"
 
-    - name: Fire up the virtual machine
-      ansible.builtin.shell: virt-install --memory 4096 --vcpus 2 --name {{ item.cluster_name }} --cdrom /var/lib/libvirt/images/{{ item.cluster_name }}-r4e-microshift-installer.x86_64.iso --disk size=20 --os-variant rhel8.5 --network=default --virt-type kvm --connect qemu:///system
-      become: true
-      loop: "{{ rhel4edge_instances }}"
-
-    - name: Wait for VMs to settle
-      ansible.builtin.pause:
-        seconds: 240
+    - name: Microshift builder | ISO Embedded
+      ansible.builtin.debug:
+        msg:
+          - Your ISO is ready to be used to install microshift on your favourite hypervisor in the rhel4edge/{{ microshift_instance_name | default('microshift', true) }} folder.
+          - The hostname for the instance is "{{ microshift_instance_name | default('microshift', true) }}" and you can access it using the credentials "admin/redhat"

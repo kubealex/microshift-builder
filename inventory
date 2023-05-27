@@ -1,2 +1,5 @@
 [builder]
 builder ansible_host=service-vm.rh-lab.labs ansible_user=sysadmin ansible_password=redhat
+
+[vm_host]
+localhost ansible_connection=local
