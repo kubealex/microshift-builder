@@ -8,6 +8,7 @@
         microshift_build_path: /root/microshift
         microshift_edge_tree_blueprint: r4e-installer.toml
         microshift_edge_image_blueprint: r4e-microshift.toml
+        microshift_blueprint_name: r4e-microshift
 
     - name: Populate temporary directory
       ansible.builtin.file:
@@ -32,23 +33,24 @@
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: "{{ microshift_build_path }}/"
+        mode: "0755"
       loop:
-        - r4e-microshift.toml
+        - "{{ microshift_edge_image_blueprint }}"
         - "{{ microshift_edge_tree_blueprint }}"
 
     - name: Cleanup blueprint in composer-cli
-      ansible.builtin.shell: composer-cli blueprints delete r4e-microshift || true
+      ansible.builtin.shell: composer-cli blueprints delete {{ microshift_blueprint_name }} || true
 
     - name: Push blueprint in composer-cli
       ansible.builtin.shell: composer-cli blueprints push "{{ microshift_build_path }}/{{ microshift_edge_image_blueprint }}"
       register: push_blueprint
 
     - name: Depsolve blueprint dependencies
-      ansible.builtin.shell: composer-cli blueprints depsolve r4e-microshift
+      ansible.builtin.shell: composer-cli blueprints depsolve {{ microshift_blueprint_name }}
       register: depsolve_output
 
     - name: Start os-tree container image build
-      ansible.builtin.shell: composer-cli compose start-ostree --ref rhel/8/$(uname -i)/edge r4e-microshift edge-container
+      ansible.builtin.shell: composer-cli compose start-ostree --ref rhel/8/$(uname -i)/edge {{ microshift_blueprint_name }} edge-container
       register: os_tree_build_output
 
     - name: Set image UUID as fact
