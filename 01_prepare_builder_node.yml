@@ -1,0 +1,61 @@
+---
+- name: Prepare RHEL node to build R4E ISO
+  hosts: builder
+  become: true
+  vars_prompt:
+    - name: rhsm_user
+      prompt: What is your RHSM Username (RHNID)?
+      unsafe: true
+      private: false
+
+    - name: rhsm_password
+      prompt: What is your RHSM Password?
+      unsafe: true
+      private: true
+
+  tasks:
+    - name: Register system with Red Hat Subscription Manager
+      community.general.redhat_subscription:
+        state: present
+        username: "{{ rhsm_user }}"
+        password: "{{ rhsm_password }}"
+
+    - name: Disable all RHSM repositories
+      community.general.rhsm_repository:
+        name: '*'
+        state: disabled
+
+    - name: Enable required RHSM repositories
+      community.general.rhsm_repository:
+        name:
+          - rhocp-4.13-for-rhel-9-x86_64-rpm
+          - fast-datapath-for-rhel-9-x86_64-rpms
+        state: enabled
+
+    - name: Install required packages
+      ansible.builtin.yum:
+        name:
+          - osbuild-composer
+          - composer-cli
+          - cockpit-composer
+          - bash-completion
+          - podman
+          - genisoimage
+          - syslinux
+          - lorax
+        state: present
+
+    - name: Ensure required services are enabled
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - osbuild-composer.socket
+        - cockpit.socket
+
+    - name: Allow new services on firewalld
+      ansible.posix.firewalld:
+        service: cockpit
+        permanent: true
+        state: enabled

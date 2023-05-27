@@ -1,0 +1,39 @@
+lang en_US.UTF-8
+keyboard us
+timezone UTC
+zerombr
+clearpart --all --initlabel
+autopart --type=plain --fstype=xfs --nohome
+reboot
+text
+network --bootproto=dhcp --device=link --activate --onboot=on --hostname={{ item.cluster_name }}
+
+ostreesetup --osname=rhel-edge-microshift --remote=rhel-edge-microshift --url=file:///run/install/repo/ostree/repo --ref=rhel/8/x86_64/edge --nogpg
+
+%post --log=/var/log/anaconda/post-install.log --erroronfail
+useradd -m -d /home/redhat -p \$5\$XDVQ6DxT8S5YWLV7\$8f2om5JfjK56v9ofUkUAwZXTxJl3Sqnc9yPnza4xoJ0 -G wheel redhat
+mkdir -p /home/redhat/.ssh
+chmod 755 /home/redhat/.ssh
+tee /home/redhat/.ssh/authorized_keys > /dev/null << EOF
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCz4ROoF9LFI3uFuXBlHwp6Iu/fZ1oQDgDOocmf3S2DXaJG5O1IA/Qh1UfIyVJD2zzzqQFzBk/RMJhr9Zxqktk/UVc4ZYyqS2RTB+wDvg2t4KEUdF+bU/C7jywIcdEd3Qz1RXcMkmDoOPIrXksvzONUlyGr48JvSMw4YPAMWPHQ6xrKng1TnVRjL17TUQK4fpzcFWynkX3pvdc7EPT8MUp95l33tk2CdybcQKqXdP0PvY1myoGSJ8IM6oHOh94D88dtj2G3r6aK4doLn2bkKnXN4orot2gN/rn4YM0kH3p0Q7oD7tURWlVIIkh6fwm323z1VNYIwbbcNR0wCSkPOqP4kE0iwA4nLkPT1aZMLesyTZyP4AgWHQIhgw9EKeV6isfMs9q/DergbUKLjsf4FZGh+3ojdXVRyiwGrRb3dBOre3lsBnCADLOk2xEmB4uGZa+OkteRFBJvWdcwqclt/no3Oh0bW0GgW1HeliOH3u4kFl0RgFkcSH+oFQn7xXq+ock=
+EOF
+echo -e 'redhat\tALL=(ALL)\tNOPASSWD: ALL' >> /etc/sudoers
+%end
+
+%post --log=/var/log/anaconda/insights-on-reboot-unit-install.log --interpreter=/usr/bin/bash --erroronfail
+INSIGHTS_CLIENT_OVERRIDE_DIR=/etc/systemd/system/insights-client.service.d
+INSIGHTS_CLIENT_OVERRIDE_FILE=$INSIGHTS_CLIENT_OVERRIDE_DIR/override.conf
+
+if [ ! -f $INSIGHTS_CLIENT_OVERRIDE_FILE ]; then
+    mkdir -p $INSIGHTS_CLIENT_OVERRIDE_DIR
+    cat > $INSIGHTS_CLIENT_OVERRIDE_FILE << EOF 
+[Unit]
+Requisite=greenboot-healthcheck.service
+After=network-online.target greenboot-healthcheck.service
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl enable insights-client.service
+fi
+%end

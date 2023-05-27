@@ -1,0 +1,17 @@
+name = "minimal-microshift"
+
+description = ""
+version = "0.0.1"
+modules = []
+groups = []
+
+[[packages]]
+name = "microshift"
+version = "4.13.0-1"
+
+[[packages]]
+name = "microshift-greenboot"
+version = "4.13.0-1"
+
+[customizations.services]
+enabled = ["microshift"]

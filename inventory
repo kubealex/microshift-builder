@@ -1,0 +1,4 @@
+[builder]
+rhel8-server.rhel.labs ansible_user=sysadmin ansible_password=redhat
+
+[vm_host]
