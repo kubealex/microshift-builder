@@ -1,28 +1,29 @@
 ---
-- name: Setup os-tree image
+- name: Microshift builder | Cook RHEL for Edge installer ISO
   hosts: builder
   become: true
   tasks:
-    - name: Set facts for folders
+    - name: Microshift builder | Set facts for folders
       ansible.builtin.set_fact:
         microshift_build_path: /root/microshift
         microshift_edge_tree_blueprint: r4e-installer.toml
         microshift_edge_image_blueprint: r4e-microshift.toml
         microshift_blueprint_name: r4e-microshift
+        microshift_installer_blueprint_name: r4e-installer
 
-    - name: Populate temporary directory
+    - name: Microshift builder | Populate temporary directory
       ansible.builtin.file:
         path: /root/microshift
         state: directory
         mode: "0755"
 
-    - name: Prepare repositories folder
+    - name: Microshift builder | Prepare repositories folder
       ansible.builtin.file:
         path: /etc/osbuild-composer/repositories/
         state: directory
         recurse: true
 
-    - name: Ensure needed RHEL repos are in place
+    - name: Microshift builder | Ensure needed RHEL repos are in place
       ansible.builtin.copy:
         src: "repositories/{{ item }}"
         dest: /etc/osbuild-composer/repositories/
@@ -31,20 +32,20 @@
         - rhel-9.json
         - rhel-92.json
 
-    - name: Cleanup sources before adding
+    - name: Microshift builder | Cleanup previous builds before proceeding
       ansible.builtin.shell: composer-cli compose list | awk 'FNR==2{ print $1 }'
       register: compose_list
 
-    - name: Cleanup
+    - name: Microshift builder | Cleanup previous builds before proceeding
       ansible.builtin.shell: composer-cli compose delete {{ item }}
       loop: "{{ compose_list.stdout_lines }}"
 
-    - name: Restart osbuilder-composer
+    - name: Microshift builder | Restart osbuild-composer
       ansible.builtin.service:
         name: osbuild-composer.service
         state: restarted
 
-    - name: Copy files on builder
+    - name: Microshift builder | Copy needed blueprints in the build directory
       ansible.builtin.copy:
         src: "blueprints/{{ item }}"
         dest: "{{ microshift_build_path }}/"
@@ -53,18 +54,18 @@
         - "{{ microshift_edge_image_blueprint }}"
         - "{{ microshift_edge_tree_blueprint }}"
 
-    - name: Cleanup blueprint in composer-cli
+    - name: Microshift builder | os-tree container | Cleanup blueprint in composer-cli
       ansible.builtin.shell: composer-cli blueprints delete {{ microshift_blueprint_name }} || true
 
-    - name: Push blueprint in composer-cli
+    - name: Microshift builder | os-tree container | Push blueprint in composer-cli
       ansible.builtin.shell: composer-cli blueprints push "{{ microshift_build_path }}/{{ microshift_edge_image_blueprint }}"
       register: push_blueprint
 
-    - name: Depsolve blueprint dependencies
+    - name: Microshift builder | os-tree container | Depsolve blueprint dependencies
       ansible.builtin.shell: composer-cli blueprints depsolve {{ microshift_blueprint_name }}
       register: depsolve_output
 
-    - name: Start os-tree container image build
+    - name: Microshift builder | os-tree container | Start os-tree container image build
       ansible.builtin.shell: composer-cli compose start-ostree --ref rhel/9/$(uname -i)/edge {{ microshift_blueprint_name }} edge-container
       register: os_tree_build_output
 
@@ -72,45 +73,45 @@
       ansible.builtin.set_fact:
         ostree_image_uuid: "{{ os_tree_build_output.stdout | regex_search('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}') }}"
 
-    - name: Wait for os-tree image to be built
+    - name: Microshift builder | os-tree container | Wait for os-tree container image to be built
       ansible.builtin.shell: composer-cli compose status | grep {{ ostree_image_uuid }} | awk '{print $2}'
       register: image_status
       until: ("FINISHED" in image_status.stdout) or ("FAILED" in image_status.stdout)
       retries: 50
       delay: 120
 
-    - name: Download the image
+    - name: Microshift builder | os-tree container | Download the os-tree container image
       ansible.builtin.shell:
         cmd: composer-cli compose logs {{ ostree_image_uuid }} && composer-cli compose metadata {{ ostree_image_uuid }} && composer-cli compose image {{ ostree_image_uuid }}
         chdir: "{{ microshift_build_path }}"
 
-    - name: Cleanup previous containers
+    - name: Microshift builder | os-tree container | Cleanup previous containers before proceeding
       containers.podman.podman_container:
         name: rhel-edge-container
         state: absent
 
-    - name: Cleanup previous images
+    - name: Microshift builder | os-tree container | Cleanup previous images before proceeding
       containers.podman.podman_image:
         name: localhost/rhel-edge-container
         force: true
         state: absent
 
-    - name: Load os-tree tar into OCI image
+    - name: Microshift builder | os-tree container | Load os-tree container archive as OCI image
       containers.podman.podman_load:
         input: "{{ microshift_build_path }}/{{ ostree_image_uuid }}-container.tar"
       register: image_load
 
-    - name: Set image id as fact
+    - name: Microshift builder | os-tree container | Set loaded image ID as fact
       ansible.builtin.set_fact:
         ostree_image_id: "{{ image_load.image.Id }}"
 
-    - name: Tag resulting image
+    - name: Microshift builder | Tag resulting image
       containers.podman.podman_tag:
         image: "{{ ostree_image_id }}"
         target_names:
           - localhost/rhel-edge-container
 
-    - name: Run os-tree container
+    - name: Microshift builder | os-tree container | Start os-tree container
       containers.podman.podman_container:
         image: localhost/rhel-edge-container
         publish:
@@ -119,55 +120,55 @@
         detach: true
         state: started
 
-    - name: Cleanup in composer-cli
-      ansible.builtin.shell: composer-cli blueprints delete installer || true
+    - name: Microshift builder | installer ISO | Cleanup in composer-cli
+      ansible.builtin.shell: composer-cli blueprints delete {{ microshift_installer_blueprint_name }} || true
 
-    - name: Push blueprint in composer-cli
+    - name: Microshift builder | installer ISO | Push blueprint in composer-cli
       ansible.builtin.shell: composer-cli blueprints push {{ microshift_build_path }}/{{ microshift_edge_tree_blueprint }}
       register: push_blueprint
 
-    - name: Depsolve blueprint dependencies
-      ansible.builtin.shell: composer-cli blueprints depsolve installer
+    - name: Microshift builder | installer ISO | Depsolve blueprint dependencies
+      ansible.builtin.shell: composer-cli blueprints depsolve {{ microshift_installer_blueprint_name }}
       register: depsolve_output
 
-    - name: Start installer image build
-      ansible.builtin.shell: composer-cli compose start-ostree --ref rhel/9/$(uname -i)/edge --url http://localhost:8080/repo/ installer edge-installer
+    - name: Microshift builder | installer ISO | Start installer image build
+      ansible.builtin.shell: composer-cli compose start-ostree --ref rhel/9/$(uname -i)/edge --url http://localhost:8080/repo/ {{ microshift_installer_blueprint_name }} edge-installer
       register: installer_build_output
 
-    - name: Set installer image UUID as fact
+    - name: Microshift builder | installer ISO | Set installer image UUID as fact
       ansible.builtin.set_fact:
         installer_image_uuid: "{{ installer_build_output.stdout | regex_search('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}') }}"
 
-    - name: Wait for installer image to be built
+    - name: Microshift builder | installer ISO | Wait for installer image to be built
       ansible.builtin.shell: composer-cli compose status | grep {{ installer_image_uuid }} | awk '{print $2}'
       register: image_status
       until: ("FINISHED" in image_status.stdout) or ("FAILED" in image_status.stdout)
       retries: 50
       delay: 120
 
-    - name: Download the image
+    - name: Microshift builder | installer ISO | Download the image
       ansible.builtin.shell:
         cmd: composer-cli compose logs {{ installer_image_uuid }} && composer-cli compose metadata {{ installer_image_uuid }} && composer-cli compose image {{ installer_image_uuid }}
         chdir: "{{ microshift_build_path }}"
 
-    - name: Remove os-tree container
+    - name: Microshift builder | cleanup | Remove os-tree container
       containers.podman.podman_container:
         name: rhel-edge-container
         state: absent
 
-    - name: Remove os-tree image
+    - name: Microshift builder | cleanup | Remove os-tree image
       containers.podman.podman_image:
         name: "{{ ostree_image_id }}"
         state: absent
 
-    - name: Prepare deployment folder in playbook directory
+    - name: Microshift builder | Prepare deployment folder in playbook directory
       ansible.builtin.file:
         path: "{{ playbook_dir }}/rhel4edge"
         state: directory
         mode: "0755"
       delegate_to: 127.0.0.1
 
-    - name: Fetch built image
+    - name: Microshift builder | Fetch built image
       ansible.posix.synchronize:
         src: "{{ microshift_build_path }}/{{ installer_image_uuid }}-installer.iso"
         dest: "{{ playbook_dir }}/rhel4edge/r4e-microshift-installer.x86_64.iso"

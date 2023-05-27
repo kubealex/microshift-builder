@@ -1,4 +1,4 @@
-name = "installer"
+name = "r4e-installer"
 description = ""
 version = "0.0.1"
 packages = []

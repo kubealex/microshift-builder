@@ -1,5 +1,5 @@
 ---
-- name: Prepare RHEL node to build R4E ISO
+- name: Microshift builder | Prepare RHEL node to build RHEL for Edge ISO with Microshift
   hosts: builder
   become: true
   vars_prompt:
@@ -14,13 +14,13 @@
       private: true
 
   tasks:
-    - name: Register system with Red Hat Subscription Manager
+    - name: Microshift builder | Register system with Red Hat Subscription Manager
       community.general.redhat_subscription:
         state: present
         username: "{{ rhsm_user }}"
         password: "{{ rhsm_password }}"
 
-    - name: Install required packages
+    - name: Microshift builder | Install required packages
       ansible.builtin.yum:
         name:
           - osbuild-composer
@@ -36,14 +36,14 @@
           - containernetworking-cni
         state: present
 
-    - name: Enable required RHSM repositories
+    - name: Microshift builder | Enable required RHSM repositories
       community.general.rhsm_repository:
         name:
           - rhocp-4.13-for-rhel-9-x86_64-rpms
           - fast-datapath-for-rhel-9-x86_64-rpms
         state: enabled
 
-    - name: Ensure required services are enabled
+    - name: Microshift builder | Ensure required services are enabled
       ansible.builtin.service:
         name: "{{ item }}"
         state: started
@@ -53,7 +53,7 @@
         - osbuild-composer.socket
         - cockpit.socket
 
-    - name: Allow new services on firewalld
+    - name: Microshift builder | Allow new services on firewalld
       ansible.posix.firewalld:
         service: cockpit
         permanent: true
