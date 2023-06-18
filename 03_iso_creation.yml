@@ -1,0 +1,40 @@
+---
+- name: Microshift builder | Embed Kickstart in Microshift ISO
+  hosts: vm_host
+  vars_files:
+    - builder-config.yml
+  tasks:
+    - name: Microshift builder | Fail fast if pull secret is not defined
+      ansible.builtin.fail:
+        msg: You need to specify a pull secret in builder-config.yml
+      when: microshift_pull_secret is not defined or microshift_pull_secret == ''
+
+    - name: Microshift builder | Ensure lorax is installed
+      ansible.builtin.dnf:
+        name: lorax
+        state: present
+      become: true
+
+    - name: Microshift builder | Create instance dir
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/rhel4edge/{{ microshift_instance_name | default('microshift', true) }}"
+        state: directory
+        recurse: true
+
+    - name: Microshift builder | Trigger kickstart template
+      ansible.builtin.template:
+        src: kickstart.j2
+        dest: "{{ playbook_dir }}/rhel4edge/{{ microshift_instance_name | default('microshift', true) }}/ks.cfg"
+        mode: "0755"
+
+    - name: Microshift builder | Embed kickstart on freshly built image
+      ansible.builtin.shell: mkksiso {{ playbook_dir }}/rhel4edge/{{ microshift_instance_name | default('microshift') }}/ks.cfg {{ playbook_dir }}/rhel4edge/r4e-microshift-installer.x86_64.iso {{ playbook_dir }}/rhel4edge/{{ microshift_instance_name | default('microshift', true) }}/microshift-installer.iso
+      args:
+        creates: "{{ playbook_dir }}/rhel4edge/{{ microshift_instance_name | default('microshift', true) }}/microshift-installer.iso"
+      become: true
+
+    - name: Microshift builder | ISO Embedded
+      ansible.builtin.debug:
+        msg:
+          - Your ISO is ready to be used to install microshift on your favourite hypervisor in the rhel4edge/{{ microshift_instance_name | default('microshift', true) }} folder.
+          - The hostname for the instance is "{{ microshift_instance_name | default('microshift', true) }}" and you can access it using the credentials "admin/redhat"
