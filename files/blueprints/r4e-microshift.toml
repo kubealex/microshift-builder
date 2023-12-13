@@ -12,9 +12,6 @@ version = "*"
 [customizations]
 hostname = "microshift"
 
-[customizations.services]
-enabled = ["microshift"]
-
 [[customizations.user]]
 name = "admin"
 password = "$6$jBTYy1CgwFQCJkVc$C0iBtRXMprbz7TWIzM9aaXe6b1clOhcV8YHWnNUbKvpP6xtz3.vmP5L6/683ac6hqSaqPPcK7gm9XXeEhp48W."
