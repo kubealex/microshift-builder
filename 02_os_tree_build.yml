@@ -10,6 +10,9 @@
         microshift_edge_image_blueprint: r4e-microshift.toml
         microshift_blueprint_name: r4e-microshift
         microshift_installer_blueprint_name: r4e-installer
+        microshift_repos:
+          - rhocp-4.14.toml
+          - fast-datapath.toml
 
     - name: Microshift builder | Populate temporary directory
       ansible.builtin.file:
@@ -23,14 +26,14 @@
         state: directory
         recurse: true
 
-    - name: Microshift builder | Ensure needed RHEL repos are in place
-      ansible.builtin.copy:
-        src: "repositories/{{ item }}"
-        dest: /etc/osbuild-composer/repositories/
-        mode: "0755"
-      loop:
-        - rhel-9.json
-        - rhel-92.json
+    # - name: Microshift builder | Ensure needed RHEL repos are in place
+    #   ansible.builtin.copy:
+    #     src: "repositories/{{ item }}"
+    #     dest: /etc/osbuild-composer/repositories/
+    #     mode: "0755"
+    #   loop:
+    #     - rhel-9.json
+    #     - rhel-92.json
 
     - name: Microshift builder | Cleanup previous builds before proceeding
       ansible.builtin.shell: composer-cli compose list | awk 'FNR==2{ print $1 }'
@@ -53,6 +56,17 @@
       loop:
         - "{{ microshift_edge_image_blueprint }}"
         - "{{ microshift_edge_tree_blueprint }}"
+
+    - name: Microshift builder | Ensure Repo TOML files are in place
+      ansible.builtin.copy:
+        src: "repositories/{{ item }}"
+        dest: "{{ microshift_build_path }}/"
+        mode: "0755"
+      loop: "{{ microshift_repos }}"
+
+    - name: Microshift builder | os-tree container | Cleanup blueprint in composer-cli
+      ansible.builtin.shell: composer-cli sources add {{ microshift_build_path }}/{{ item }}
+      loop: "{{ microshift_repos }}"
 
     - name: Microshift builder | os-tree container | Cleanup blueprint in composer-cli
       ansible.builtin.shell: composer-cli blueprints delete {{ microshift_blueprint_name }} || true

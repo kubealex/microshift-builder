@@ -36,13 +36,6 @@
           - containernetworking-cni
         state: present
 
-    - name: Microshift builder | Enable required RHSM repositories
-      community.general.rhsm_repository:
-        name:
-          - rhocp-4.13-for-rhel-9-x86_64-rpms
-          - fast-datapath-for-rhel-9-x86_64-rpms
-        state: enabled
-
     - name: Microshift builder | Ensure required services are enabled
       ansible.builtin.service:
         name: "{{ item }}"

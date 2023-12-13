@@ -7,9 +7,13 @@ distro = ""
 
 [[packages]]
 name = "microshift"
+version = "*"
 
 [customizations]
 hostname = "microshift"
+
+[customizations.services]
+enabled = ["microshift"]
 
 [[customizations.user]]
 name = "admin"

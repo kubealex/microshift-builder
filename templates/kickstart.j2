@@ -23,6 +23,6 @@ firewall-offline-cmd --zone=trusted --add-source=10.42.0.0/16
 firewall-offline-cmd --zone=trusted --add-source=169.254.169.1
 firewall-offline-cmd --zone=public --add-port=6443/tcp --add-port=443/tcp --add-port=80/tcp --add-port=31883/tcp
 
-curl -o /root/oc.tar.gz "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.13/openshift-client-linux.tar.gz"
+curl -o /root/oc.tar.gz "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.14/openshift-client-linux.tar.gz"
 tar -xvf /root/oc.tar.gz -C /usr/local/bin
 %end
